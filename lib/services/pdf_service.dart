@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import '../utils/bn_digits.dart';
+
 
 import 'package:flutter/material.dart'
     show
@@ -240,7 +242,7 @@ class PdfService {
     return '${negative ? '-' : ''}$grouped$fracPart';
   }
 
-  static String _taka(dynamic amount) => '৳ ${_withCommas('${amount ?? 0}')}';
+  static String _taka(dynamic amount) => '৳ ${toBnDigits(_withCommas('${amount ?? 0}'))}';
 
   static bool _isAmountColumn(String col) {
     final c = col.toLowerCase();
@@ -252,13 +254,18 @@ class PdfService {
   // -------------------------------------------------------------------
   static Future<void> printVoucher(
       Map<String, dynamic> voucher, {
-        String orgName = 'ওয়াক্‌ফ আল-আওলাদ এস্টেট হিসাবরক্ষণ',
+        String orgName = 'হযরত শাহ্ মোহাম্মদ ইলিয়াস শাহ্ (রহ.)\nওয়াক্‌ফ আল-আওলাদ এস্টেট',
       }) async {
     final typeLabel = voucherTypeLabels[voucher['voucher_type']] ?? (voucher['voucher_type']?.toString() ?? '-');
 
     final doc = pw.Document();
 
-    final orgNameImg = await _text(orgName, fontSize: 16, fontWeight: FontWeight.bold, color: _brand);
+    final orgNameLines = <pw.Widget>[];
+    for (final line in orgName.split('\n')) {
+      orgNameLines.add(
+        pw.Center(child: await _text(line, fontSize: 15, fontWeight: FontWeight.bold, color: _brand)),
+      );
+    }
     final typeLabelImg = await _text(typeLabel, fontSize: 12, fontWeight: FontWeight.bold, color: _brand);
     final row1 = await _detailRow('ভাউচার নং', voucher['voucher_no']?.toString() ?? '-', isLast: false);
     final row2 = await _detailRow('তারিখ', voucher['voucher_date']?.toString() ?? '-', isLast: false);
@@ -278,7 +285,7 @@ class PdfService {
               // ব্র্যান্ড ঘোষণা ফালি
               pw.Container(height: 4, color: _brand),
               pw.SizedBox(height: 14),
-              pw.Center(child: orgNameImg),
+              ...orgNameLines,
               pw.SizedBox(height: 10),
               pw.Center(
                 child: pw.Container(
@@ -362,7 +369,7 @@ class PdfService {
     required String periodLabel,
     required Set<String> visibleSections,
     required bool isAudit,
-    String orgName = 'ওয়াক্‌ফ আল-আওলাদ এস্টেট হিসাবরক্ষণ',
+    String orgName = 'হযরত শাহ্ মোহাম্মদ ইলিয়াস শাহ্ (রহ.) ওয়াক্‌ফ আল-আওলাদ এস্টেট',
   }) async {
     final doc = pw.Document();
 

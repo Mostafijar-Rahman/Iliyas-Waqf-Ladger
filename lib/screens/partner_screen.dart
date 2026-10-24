@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/bn_digits.dart';
+
 
 // --- ডিজাইন টোকেন (অন্যান্য স্ক্রিনের সাথে সামঞ্জস্যপূর্ণ) ---
 class _C {
@@ -62,7 +64,7 @@ String _money(dynamic v) {
   final isNegative = n < 0;
   final formatted = n.abs().toStringAsFixed(0);
   final withComma = _addCommas(formatted);
-  return '৳ ${isNegative ? '-' : ''}$withComma';
+  return '৳ ${isNegative ? '-' : ''}${toBnDigits(withComma)}';
 }
 
 class PartnerScreen extends StatefulWidget {

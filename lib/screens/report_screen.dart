@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/pdf_service.dart';
+import '../utils/bn_digits.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -454,7 +455,7 @@ class _ReportScreenState extends State<ReportScreen> {
         children: [
           Text(title, style: TextStyle(fontSize: 12, color: color.withOpacity(0.9))),
           const SizedBox(height: 4),
-          Text('৳ ${amount.toStringAsFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          Text('৳ ${amount.toBnFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );
@@ -495,7 +496,7 @@ class _ReportScreenState extends State<ReportScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(row['category_name'] ?? '-'),
-                Text('৳ ${row['total'] ?? 0}', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+                Text('৳ ${toBnDigits('${row['total'] ?? 0}')}', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
               ],
             ),
           );
@@ -510,7 +511,7 @@ class _ReportScreenState extends State<ReportScreen> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('মোট: ৳ ${total ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text('মোট: ৳ ${toBnDigits('${total ?? 0}')}', style: const TextStyle(fontWeight: FontWeight.bold)),
           const Divider(),
           if (rows.isEmpty)
             const Text('এই সময়কালে কোনো পেমেন্ট হয়নি', style: TextStyle(color: Colors.grey))
@@ -522,7 +523,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(row[nameKey] ?? '-'),
-                    Text('৳ ${row[amountKey] ?? 0}  (${row['payment_date'] ?? '-'})', style: const TextStyle(fontSize: 12)),
+                    Text('৳ ${toBnDigits('${row[amountKey] ?? 0}')}  (${row['payment_date'] ?? '-'})', style: const TextStyle(fontSize: 12)),
                   ],
                 ),
               );
@@ -544,7 +545,7 @@ class _ReportScreenState extends State<ReportScreen> {
           headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
           columns: columns.map((c) => DataColumn(label: Text(c, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)))).toList(),
           rows: rows.map<DataRow>((row) {
-            return DataRow(cells: columns.map((c) => DataCell(Text('${row[c] ?? '-'}'))).toList());
+            return DataRow(cells: columns.map((c) => DataCell(Text(c.toLowerCase().contains('amount') ? toBnDigits('${row[c] ?? '-'}') : '${row[c] ?? '-'}'))).toList());
           }).toList(),
         ),
       ),

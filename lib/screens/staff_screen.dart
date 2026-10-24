@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/bn_digits.dart';
 
 // --- ডিজাইন টোকেন ---
 class _C {
@@ -222,14 +223,14 @@ class _StaffScreenState extends State<StaffScreen> with SingleTickerProviderStat
                         subtitle: Text(
                           '${s['designation'] ?? ''} • ${s['phone'] ?? ''}'
                               '${!isActive ? '\nনিষ্ক্রিয় — ছাড়ার তারিখ: ${_formatDate(s['end_date'])}' : ''}'
-                              '${isActive && outstanding > 0 ? '\nবকেয়া অগ্রিম: ৳${outstanding.toStringAsFixed(0)}' : ''}',
+                              '${isActive && outstanding > 0 ? '\nবকেয়া অগ্রিম: ৳${outstanding.toBnFixed(0)}' : ''}',
                           style: !isActive ? const TextStyle(fontSize: 12, color: _C.danger) : _caption,
                         ),
                         isThreeLine: !isActive || (isActive && outstanding > 0),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('৳${_asDouble(s['monthly_salary']).toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? _C.primary : _C.textSecondary, fontSize: 14)),
+                            Text('৳${_asDouble(s['monthly_salary']).toBnFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? _C.primary : _C.textSecondary, fontSize: 14)),
                             const SizedBox(width: 4),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 18, color: _C.textSecondary),
@@ -305,13 +306,13 @@ class _StaffScreenState extends State<StaffScreen> with SingleTickerProviderStat
                         Text((log['staff_name'] ?? '').toString(), style: _subheading),
                         Text(
                           '${_formatDate(log['payment_date'])} • মাস: ${(log['salary_month'] ?? '').toString().substring(0, 7)} • ${_paymentMethodLabel(log['payment_method'])}'
-                              '${_asDouble(log['advance_deducted']) > 0 ? ' • অগ্রিম কর্তন ৳${_asDouble(log['advance_deducted']).toStringAsFixed(0)}' : ''}',
+                              '${_asDouble(log['advance_deducted']) > 0 ? ' • অগ্রিম কর্তন ৳${_asDouble(log['advance_deducted']).toBnFixed(0)}' : ''}',
                           style: _caption,
                         ),
                       ],
                     ),
                   ),
-                  Text('৳${_asDouble(log['paid_amount']).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: _C.primary, fontSize: 15)),
+                  Text('৳${_asDouble(log['paid_amount']).toBnFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: _C.primary, fontSize: 15)),
                 ],
               ),
             )),
@@ -664,7 +665,7 @@ class _SalaryFormState extends State<_SalaryForm> {
     if (_selectedStaff == null || _netPayable <= 0 || _saving) return;
     final advanceSettle = double.tryParse(_advanceSettleCtrl.text) ?? 0;
     if (advanceSettle > _outstandingAdvance) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('বকেয়া অগ্রিমের (৳${_outstandingAdvance.toStringAsFixed(0)}) চেয়ে বেশি কর্তন করা যাবে না')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('বকেয়া অগ্রিমের (৳${_outstandingAdvance.toBnFixed(0)}) চেয়ে বেশি কর্তন করা যাবে না')));
       return;
     }
     setState(() => _saving = true);
@@ -714,7 +715,7 @@ class _SalaryFormState extends State<_SalaryForm> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(color: _C.danger.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
-              child: Text('এই স্টাফের বকেয়া অগ্রিম: ৳${_outstandingAdvance.toStringAsFixed(0)}', style: const TextStyle(color: _C.danger, fontSize: 12, fontWeight: FontWeight.w600)),
+              child: Text('এই স্টাফের বকেয়া অগ্রিম: ৳${_outstandingAdvance.toBnFixed(0)}', style: const TextStyle(color: _C.danger, fontSize: 12, fontWeight: FontWeight.w600)),
             ),
           ],
           const SizedBox(height: 10),
@@ -760,7 +761,7 @@ class _SalaryFormState extends State<_SalaryForm> {
             TextField(
               controller: _advanceSettleCtrl,
               keyboardType: TextInputType.number,
-              decoration: _fieldDecoration('অগ্রিম থেকে কর্তন (সর্বোচ্চ ৳${_outstandingAdvance.toStringAsFixed(0)})', icon: Icons.request_quote_outlined),
+              decoration: _fieldDecoration('অগ্রিম থেকে কর্তন (সর্বোচ্চ ৳${_outstandingAdvance.toBnFixed(0)})', icon: Icons.request_quote_outlined),
               onChanged: (_) => setState(() {}),
             ),
           ],
@@ -772,7 +773,7 @@ class _SalaryFormState extends State<_SalaryForm> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('সর্বমোট প্রদানযোগ্য নিট বেতন:', style: _subheading),
-                Text('৳${_netPayable.toStringAsFixed(0)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _C.primary)),
+                Text('৳${_netPayable.toBnFixed(0)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _C.primary)),
               ],
             ),
           ),
@@ -905,12 +906,12 @@ class _AdvanceTabBodyState extends State<_AdvanceTabBody> {
                   child: ListTile(
                     title: Text((adv['staff_name'] ?? '').toString(), style: _subheading),
                     subtitle: Text(
-                      '${adv['advance_date'] ?? ''} • মোট ৳${_asDouble(adv['advance_amount']).toStringAsFixed(0)}'
-                          '${remaining > 0 ? ' • বকেয়া ৳${remaining.toStringAsFixed(0)}' : ' • সম্পূর্ণ সমন্বয় হয়েছে'}',
+                      '${adv['advance_date'] ?? ''} • মোট ৳${_asDouble(adv['advance_amount']).toBnFixed(0)}'
+                          '${remaining > 0 ? ' • বকেয়া ৳${remaining.toBnFixed(0)}' : ' • সম্পূর্ণ সমন্বয় হয়েছে'}',
                       style: _caption,
                     ),
                     trailing: Text(
-                      '৳${remaining.toStringAsFixed(0)}',
+                      '৳${remaining.toBnFixed(0)}',
                       style: TextStyle(color: remaining > 0 ? _C.danger : _C.textSecondary, fontWeight: FontWeight.bold),
                     ),
                   ),

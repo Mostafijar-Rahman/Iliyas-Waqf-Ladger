@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/bn_digits.dart';
 
 class CashBankScreen extends StatefulWidget {
   const CashBankScreen({super.key});
@@ -43,7 +44,7 @@ class _CashBankScreenState extends State<CashBankScreen> {
       buf.write(formatted[i]);
       if (posFromEnd > 1 && posFromEnd % 3 == 1) buf.write(',');
     }
-    return '${isNegative ? '-' : ''}৳ $buf';
+    return '${isNegative ? '-' : ''}৳ ${toBnDigits(buf.toString())}';
   }
 
   // cash_bank_ledger.type থেকে মেথড ও ইন/আউট বের করা

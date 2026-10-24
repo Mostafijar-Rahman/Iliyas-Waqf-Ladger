@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/api_service.dart';
+import '../utils/bn_digits.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -123,11 +124,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildSummaryCard('মোট আয়', '৳ ${totalIncome.toStringAsFixed(2)}', Colors.green, Icons.arrow_downward)),
+                  Expanded(child: _buildSummaryCard('মোট আয়', '৳ ${totalIncome.toBnFixed(2)}', Colors.green, Icons.arrow_downward)),
                   const SizedBox(width: 15),
-                  Expanded(child: _buildSummaryCard('মোট ব্যয়', '৳ ${totalExpense.toStringAsFixed(2)}', Colors.red, Icons.arrow_upward)),
+                  Expanded(child: _buildSummaryCard('মোট ব্যয়', '৳ ${totalExpense.toBnFixed(2)}', Colors.red, Icons.arrow_upward)),
                   const SizedBox(width: 15),
-                  Expanded(child: _buildSummaryCard('নিট ব্যালেন্স', '৳ ${netBalance.toStringAsFixed(2)}', Colors.blueGrey, Icons.trending_up)),
+                  Expanded(child: _buildSummaryCard('নিট ব্যালেন্স', '৳ ${netBalance.toBnFixed(2)}', Colors.blueGrey, Icons.trending_up)),
                 ],
               ),
               const SizedBox(height: 15),
@@ -136,9 +137,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // হাতে-নগদ দেখানো হচ্ছে, আর তার পাশে সব মাধ্যম মিলিয়ে প্রকৃত মোট সম্পদ।
               Row(
                 children: [
-                  Expanded(child: _buildSummaryCard('ক্যাশ ব্যালেন্স (হাতে নগদ)', '৳ ${cashBalance.toStringAsFixed(2)}', Colors.teal, Icons.account_balance_wallet)),
+                  Expanded(child: _buildSummaryCard('ক্যাশ ব্যালেন্স (হাতে নগদ)', '৳ ${cashBalance.toBnFixed(2)}', Colors.teal, Icons.account_balance_wallet)),
                   const SizedBox(width: 15),
-                  Expanded(child: _buildSummaryCard('মোট সম্পদ (ক্যাশ+ব্যাংক+বিকাশ+নগদ)', '৳ ${totalAssets.toStringAsFixed(2)}', Colors.deepPurple, Icons.account_balance)),
+                  Expanded(child: _buildSummaryCard('মোট সম্পদ (ক্যাশ+ব্যাংক+বিকাশ+নগদ)', '৳ ${totalAssets.toBnFixed(2)}', Colors.deepPurple, Icons.account_balance)),
                 ],
               ),
               const SizedBox(height: 25),
@@ -283,7 +284,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         final entry = displayEntries[group.x.toInt()];
                         return BarTooltipItem(
-                          '৳ ${entry.value.toStringAsFixed(0)}',
+                          '৳ ${entry.value.toBnFixed(0)}',
                           TextStyle(
                             color: _chartPalette[group.x.toInt() % _chartPalette.length],
                             fontSize: 11.5,
@@ -354,7 +355,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      '${i + 1}. ${entry.key} (৳ ${entry.value.toStringAsFixed(0)}, ${percent.toStringAsFixed(0)}%)',
+                      '${i + 1}. ${entry.key} (৳ ${entry.value.toBnFixed(0)}, ${percent.toBnFixed(0)}%)',
                       style: const TextStyle(fontSize: 11),
                     ),
                   ],
@@ -416,7 +417,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return PieChartSectionData(
                       value: entry.value,
                       color: _chartPalette[i % _chartPalette.length],
-                      title: percent >= 6 ? '${percent.toStringAsFixed(0)}%' : '',
+                      title: percent >= 6 ? '${percent.toBnFixed(0)}%' : '',
                       radius: 55,
                       titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
                     );
@@ -443,7 +444,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      '${entry.key} (৳ ${entry.value.toStringAsFixed(0)})',
+                      '${entry.key} (৳ ${entry.value.toBnFixed(0)})',
                       style: const TextStyle(fontSize: 11),
                     ),
                   ],
@@ -490,14 +491,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     PieChartSectionData(
                       value: totalLoanPaid,
                       color: Colors.green,
-                      title: totalLoanTaken > 0 ? '${((totalLoanPaid / totalLoanTaken) * 100).toStringAsFixed(0)}%' : '',
+                      title: totalLoanTaken > 0 ? '${((totalLoanPaid / totalLoanTaken) * 100).toBnFixed(0)}%' : '',
                       radius: 55,
                       titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                     PieChartSectionData(
                       value: totalLoanRemaining,
                       color: Colors.redAccent,
-                      title: totalLoanTaken > 0 ? '${((totalLoanRemaining / totalLoanTaken) * 100).toStringAsFixed(0)}%' : '',
+                      title: totalLoanTaken > 0 ? '${((totalLoanRemaining / totalLoanTaken) * 100).toBnFixed(0)}%' : '',
                       radius: 55,
                       titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
@@ -515,7 +516,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Container(width: 10, height: 10, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
                     const SizedBox(width: 5),
-                    Text('পরিশোধিত (৳ ${totalLoanPaid.toStringAsFixed(0)})', style: const TextStyle(fontSize: 11)),
+                    Text('পরিশোধিত (৳ ${totalLoanPaid.toBnFixed(0)})', style: const TextStyle(fontSize: 11)),
                   ],
                 ),
                 Row(
@@ -523,7 +524,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Container(width: 10, height: 10, decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle)),
                     const SizedBox(width: 5),
-                    Text('বকেয়া (৳ ${totalLoanRemaining.toStringAsFixed(0)})', style: const TextStyle(fontSize: 11)),
+                    Text('বকেয়া (৳ ${totalLoanRemaining.toBnFixed(0)})', style: const TextStyle(fontSize: 11)),
                   ],
                 ),
               ],

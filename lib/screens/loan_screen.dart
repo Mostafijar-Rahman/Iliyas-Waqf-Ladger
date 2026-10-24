@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/bn_digits.dart';
 
 class LoanScreen extends StatefulWidget {
   const LoanScreen({super.key});
@@ -103,11 +104,11 @@ class _LoanScreenState extends State<LoanScreen> {
                               DataCell(Text('LN-${loan['id']}')),
                               DataCell(Text(loan['lender_name']?.toString() ?? '')),
                               DataCell(Text(loan['loan_date']?.toString() ?? '')),
-                              DataCell(Text('৳ ${total.toStringAsFixed(0)}',
+                              DataCell(Text('৳ ${total.toBnFixed(0)}',
                                   style: const TextStyle(fontWeight: FontWeight.bold))),
-                              DataCell(Text('৳ ${paid.toStringAsFixed(0)}',
+                              DataCell(Text('৳ ${paid.toBnFixed(0)}',
                                   style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
-                              DataCell(Text('৳ ${due.toStringAsFixed(0)}',
+                              DataCell(Text('৳ ${due.toBnFixed(0)}',
                                   style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
                               DataCell(Chip(
                                 label: Text(isPaidOff ? 'পরিশোধিত' : 'চলমান',
@@ -272,7 +273,7 @@ class _LoanScreenState extends State<LoanScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('বর্তমান বাকি: ৳ ${dueAmount.toStringAsFixed(0)}',
+                  Text('বর্তমান বাকি: ৳ ${dueAmount.toBnFixed(0)}',
                       style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   TextField(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/bn_digits.dart';
 
 // --- ডিজাইন টোকেন ---
 class _C {
@@ -460,7 +461,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${item['amount']} টাকা', style: _subheading),
+                  Text('${toBnDigits('${item['amount']}')} টাকা', style: _subheading),
                   const SizedBox(height: 2),
                   Text(
                     '${item['category_name'] ?? ''} • ${item['income_date']}${(item['description'] ?? '').toString().isNotEmpty ? ' • ${item['description']}' : ''}',

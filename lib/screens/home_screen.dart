@@ -81,8 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
           Scaffold(
             appBar: AppBar(
               title: const Text(
-                'ওয়াক্‌ফ আল-আওলাদ এস্টেট হিসাবরক্ষণ',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                'হযরত শাহ্ মোহাম্মদ ইলিয়াস শাহ্ (রহ.) ওয়াক্‌ফ আল-আওলাদ এস্টেট',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               backgroundColor: Colors.teal,
               foregroundColor: Colors.white,

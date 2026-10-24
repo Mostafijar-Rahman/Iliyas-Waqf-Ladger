@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/pdf_service.dart';
+import '../utils/bn_digits.dart';
 
 class VoucherScreen extends StatefulWidget {
   const VoucherScreen({super.key});
@@ -93,7 +94,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
             _detailRow('ধরন', meta['label']),
             _detailRow('তারিখ', v['voucher_date'] ?? '-'),
             _detailRow('বিবরণ', v['remarks'] ?? '-'),
-            _detailRow('পরিমাণ', '৳ ${v['amount'] ?? 0}'),
+            _detailRow('পরিমাণ', '৳ ${toBnDigits('${v['amount'] ?? 0}')}'),
           ],
         ),
         actions: [
@@ -246,7 +247,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
                               backgroundColor: (meta['color'] as Color).withOpacity(0.1),
                             )),
                             DataCell(Text(v['remarks'] ?? '-')),
-                            DataCell(Text('৳ ${v['amount'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold))),
+                            DataCell(Text('৳ ${toBnDigits('${v['amount'] ?? 0}')}', style: const TextStyle(fontWeight: FontWeight.bold))),
                             DataCell(Text(v['voucher_date'] ?? '-')),
                             DataCell(
                               Row(
