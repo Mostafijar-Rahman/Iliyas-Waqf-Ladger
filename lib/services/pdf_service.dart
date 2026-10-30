@@ -16,6 +16,7 @@ import 'package:flutter/services.dart' show rootBundle, FontLoader;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../utils/category_tree.dart';
 
 /// ------------------------------------------------------------------------
 /// বাংলা টেক্সট রেন্ডারিং সম্পর্কে নোট
@@ -323,6 +324,177 @@ class PdfService {
     await Printing.sharePdf(bytes: bytes, filename: fileName);
   }
 
+
+  // -------------------------------------------------------------------
+  // একসঙ্গে অনেক ভাউচার — প্রতি A4 পাতায় ২টা (উপরে ১টা, নিচে ১টা)
+  // -------------------------------------------------------------------
+  static String _wrapText(String text, int maxChars) {
+    final out = <String>[];
+    for (final paragraph in text.split('\n')) {
+      var line = '';
+      for (final word in paragraph.split(' ')) {
+        if (line.isEmpty) {
+          line = word;
+        } else if (line.length + 1 + word.length <= maxChars) {
+          line = '$line $word';
+        } else {
+          out.add(line);
+          line = word;
+        }
+      }
+      out.add(line);
+    }
+    return out.join('\n');
+  }
+
+  static Future<void> printVouchers(
+      List<dynamic> vouchers, {
+        String orgName = 'হযরত শাহ্ মোহাম্মদ ইলিয়াস শাহ্ (রহ.) ওয়াক্‌ফ আল-আওলাদ এস্টেট',
+      }) async {
+    if (vouchers.isEmpty) return;
+
+    // একই লেখার ছবি বারবার না বানিয়ে একবার বানিয়ে আবার ব্যবহার (ফাইল ছোট থাকে)
+    final cache = <String, _RenderedText>{};
+    Future<pw.Widget> t(
+        String text, {
+          double fontSize = 10,
+          FontWeight fontWeight = FontWeight.normal,
+          PdfColor color = PdfColors.black,
+        }) async {
+      final key = '$text|$fontSize|${fontWeight.index}|${color.toInt()}';
+      var r = cache[key];
+      if (r == null) {
+        r = await _render(text, fontSize: fontSize, fontWeight: fontWeight, color: color);
+        cache[key] = r;
+      }
+      return r.toWidget();
+    }
+
+    Future<pw.Widget> row(String label, String value, {bool isLast = false}) async {
+      final labelImg = await t(label, fontSize: 10, color: PdfColors.grey700);
+      final valueImg = await t(value, fontSize: 10, fontWeight: FontWeight.bold);
+      return pw.Container(
+        padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        decoration: isLast
+            ? null
+            : const pw.BoxDecoration(
+          border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.6)),
+        ),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.SizedBox(width: 85, child: labelImg),
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(right: 6),
+              child: pw.Text(':', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+            ),
+            pw.Expanded(child: valueImg),
+          ],
+        ),
+      );
+    }
+
+    Future<pw.Widget> sig(String label) async {
+      final labelImg = await t(label, fontSize: 9, color: PdfColors.grey700);
+      return pw.Column(
+        children: [
+          pw.SizedBox(width: 130, child: pw.Divider(thickness: 0.8, color: _brand)),
+          pw.SizedBox(height: 4),
+          labelImg,
+        ],
+      );
+    }
+
+    Future<pw.Widget> card(Map<String, dynamic> v) async {
+      final typeLabel = voucherTypeLabels[v['voucher_type']] ?? (v['voucher_type']?.toString() ?? '-');
+      final remarks = _wrapText((v['remarks'] ?? '-').toString().trim(), 48);
+      final orgImg = await t(orgName.replaceAll('\n', ' '), fontSize: 14, fontWeight: FontWeight.bold, color: _brand);
+      final typeImg = await t(typeLabel, fontSize: 11, fontWeight: FontWeight.bold, color: _brand);
+      final r1 = await row('ভাউচার নং', (v['voucher_no'] ?? '-').toString());
+      final r2 = await row('তারিখ', (v['voucher_date'] ?? '-').toString());
+      final r3 = await row('বিবরণ', remarks.isEmpty ? '-' : remarks);
+      final r4 = await row('পরিমাণ', _taka(v['amount']), isLast: true);
+      final s1 = await sig('প্রদানকারীর স্বাক্ষর');
+      final s2 = await sig('অনুমোদনকারীর স্বাক্ষর');
+
+      return pw.Container(
+        padding: const pw.EdgeInsets.fromLTRB(16, 12, 16, 12),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey300, width: 0.6),
+          borderRadius: pw.BorderRadius.circular(4),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.Container(height: 4, color: _brand),
+            pw.SizedBox(height: 10),
+            pw.Center(child: orgImg),
+            pw.SizedBox(height: 8),
+            pw.Center(
+              child: pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                decoration: pw.BoxDecoration(
+                  color: _brandBg,
+                  border: pw.Border.all(color: _brand, width: 0.8),
+                  borderRadius: pw.BorderRadius.circular(4),
+                ),
+                child: typeImg,
+              ),
+            ),
+            pw.SizedBox(height: 14),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
+                borderRadius: pw.BorderRadius.circular(4),
+              ),
+              child: pw.Column(children: [r1, r2, r3, r4]),
+            ),
+            pw.SizedBox(height: 34),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [s1, s2],
+            ),
+          ],
+        ),
+      );
+    }
+
+    final cards = <pw.Widget>[];
+    for (final v in vouchers) {
+      cards.add(await card(Map<String, dynamic>.from(v as Map)));
+    }
+
+    final doc = pw.Document();
+    for (var i = 0; i < cards.length; i += 2) {
+      final first = cards[i];
+      final second = i + 1 < cards.length ? cards[i + 1] : null;
+      doc.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(20),
+          build: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pw.Expanded(child: first),
+              pw.SizedBox(height: 10),
+              pw.Divider(thickness: 0.6, color: PdfColors.grey500),
+              pw.SizedBox(height: 10),
+              pw.Expanded(child: second ?? pw.SizedBox()),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final bytes = await doc.save();
+    await Printing.sharePdf(
+      bytes: bytes,
+      filename: 'Vouchers_${DateTime.now().millisecondsSinceEpoch}.pdf',
+    );
+  }
+
+
   static Future<pw.Widget> _detailRow(String label, String value, {bool isLast = false}) async {
     final labelImg = await _text(label, fontSize: 11, color: PdfColors.grey700);
     final valueImg = await _text(value, fontSize: 11, fontWeight: FontWeight.bold);
@@ -369,6 +541,8 @@ class PdfService {
     required String periodLabel,
     required Set<String> visibleSections,
     required bool isAudit,
+    List<dynamic>? incomeCategoryTree,
+    List<dynamic>? expenseCategoryTree,
     String orgName = 'হযরত শাহ্ মোহাম্মদ ইলিয়াস শাহ্ (রহ.) ওয়াক্‌ফ আল-আওলাদ এস্টেট',
   }) async {
     final doc = pw.Document();
@@ -413,50 +587,50 @@ class PdfService {
     widgets.add(pw.SizedBox(height: 16));
 
     if (visibleSections.contains('income') && report['income_by_category'] != null) {
-      widgets.add(await _titledSimpleTable('খাতভিত্তিক আয়', report['income_by_category'], 'category_name', 'total',
+      widgets.addAll(await _categorySection('খাতভিত্তিক আয়', report['income_by_category'], incomeCategoryTree, 'সর্বমোট আয়',
           accent: _incomeAccent, headerBg: _incomeBg));
     }
     if (visibleSections.contains('expense') && report['expense_by_category'] != null) {
-      widgets.add(await _titledSimpleTable('খাতভিত্তিক ব্যয়', report['expense_by_category'], 'category_name', 'total',
+      widgets.addAll(await _categorySection('খাতভিত্তিক ব্যয়', report['expense_by_category'], expenseCategoryTree, 'সর্বমোট ব্যয়',
           accent: _expenseAccent, headerBg: _expenseBg));
     }
     if (visibleSections.contains('loan') && report['loan_payments'] != null) {
-      widgets.add(await _titledSimpleTable('ঋণ পরিশোধ (মোট: ${_taka(report['loan_payment_total'])})',
+      widgets.addAll(await _titledSimpleTable('ঋণ পরিশোধ (মোট: ${_taka(report['loan_payment_total'])})',
           report['loan_payments'], 'lender_name', 'amount_paid',
           accent: _loanAccent, headerBg: _loanBg));
     }
     if (isAudit && report['loans'] != null) {
-      widgets.add(await _rawTable('ঋণের তালিকা (সব)', report['loans'],
+      widgets.addAll(await _rawTable('ঋণের তালিকা (সব)', report['loans'],
           ['lender_name', 'loan_amount', 'remaining_amount', 'loan_date'],
           accent: _loanAccent, headerBg: _loanBg));
     }
     if (visibleSections.contains('staff_salary') && report['staff_salary_payments'] != null) {
-      widgets.add(await _titledSimpleTable('স্টাফ বেতন (মোট: ${_taka(report['staff_salary_total'])})',
+      widgets.addAll(await _titledSimpleTable('স্টাফ বেতন (মোট: ${_taka(report['staff_salary_total'])})',
           report['staff_salary_payments'], 'staff_name', 'paid_amount',
           accent: _staffAccent, headerBg: _staffBg));
     }
     if (isAudit && report['staff_salary'] != null) {
-      widgets.add(await _rawTable('স্টাফ বেতন (সম্পূর্ণ ইতিহাস)', report['staff_salary'],
+      widgets.addAll(await _rawTable('স্টাফ বেতন (সম্পূর্ণ ইতিহাস)', report['staff_salary'],
           ['staff_name', 'salary_month', 'paid_amount', 'payment_date'],
           accent: _staffAccent, headerBg: _staffBg));
     }
     if (visibleSections.contains('partner_allowance') && report['partner_allowance_payments'] != null) {
-      widgets.add(await _titledSimpleTable('অংশীদারদের ভাতা (মোট: ${_taka(report['partner_allowance_total'])})',
+      widgets.addAll(await _titledSimpleTable('অংশীদারদের ভাতা (মোট: ${_taka(report['partner_allowance_total'])})',
           report['partner_allowance_payments'], 'partner_name', 'paid_amount',
           accent: _partnerAccent, headerBg: _partnerBg));
     }
     if (isAudit && report['partner_allowance'] != null) {
-      widgets.add(await _rawTable('অংশীদার ভাতা (সম্পূর্ণ ইতিহাস)', report['partner_allowance'],
+      widgets.addAll(await _rawTable('অংশীদার ভাতা (সম্পূর্ণ ইতিহাস)', report['partner_allowance'],
           ['partner_name', 'allowance_month', 'paid_amount', 'payment_date'],
           accent: _partnerAccent, headerBg: _partnerBg));
     }
     if (visibleSections.contains('vouchers') && report['vouchers'] != null) {
-      widgets.add(await _rawTable('ভাউচার তালিকা', report['vouchers'],
+      widgets.addAll(await _rawTable('ভাউচার তালিকা', report['vouchers'],
           ['voucher_no', 'voucher_type', 'amount', 'voucher_date'],
           accent: _neutralAccent, headerBg: _neutralBg));
     }
     if (isAudit && report['audit_trail'] != null) {
-      widgets.add(await _rawTable('সম্পূর্ণ আয়-ব্যয় লেজার', report['audit_trail'],
+      widgets.addAll(await _rawTable('সম্পূর্ণ আয়-ব্যয় লেজার', report['audit_trail'],
           ['type', 'description', 'amount', 'transaction_date'],
           accent: _neutralAccent, headerBg: _neutralBg));
     }
@@ -507,7 +681,11 @@ class PdfService {
     );
   }
 
-  static Future<pw.Widget> _titledSimpleTable(
+  // --- টেবিলগুলো এখন সরাসরি পাতার তালিকায় (List<pw.Widget>) বসে ---
+  // আগে pw.Inseparable দিয়ে মোড়া ছিল, তাই এক পাতার চেয়ে লম্বা টেবিলে
+  // "Widget won't fit into the page" error আসত (যেমন অডিট রিপোর্টের লেজার)।
+  // pw.Table নিজে MultiPage-এ একাধিক পাতায় ভাগ হতে পারে।
+  static Future<List<pw.Widget>> _titledSimpleTable(
       String title,
       List<dynamic> rows,
       String nameKey,
@@ -550,23 +728,76 @@ class PdfService {
       );
     }
 
-    // --- fix ৩: হেডিং একা অনাথ (orphan) হয়ে এক পাতায় থেকে যাওয়া ঠেকাতে ---
-    // pw.Inseparable হেডিং+টেবিলকে এক ব্লক হিসেবে গণ্য করে: বর্তমান পাতায়
-    // পুরোটা ধরলে সেখানেই বসবে, না ধরলে গোটা ব্লকটাই পরের (ফাঁকা) পাতায়
-    // যাবে — কিন্তু সেই নতুন পাতাতেও যদি টেবিল বড় হয়ে উপচে যায়, তখন
-    // স্বাভাবিক নিয়মেই একাধিক পাতায় ভাগ হতে পারবে (ডেটা হারাবে না)।
-    return pw.Inseparable(
-      child: pw.Container(
-        margin: const pw.EdgeInsets.only(bottom: 16),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [heading, pw.SizedBox(height: 6), body],
-        ),
-      ),
-    );
+    return [heading, pw.SizedBox(height: 6), body, pw.SizedBox(height: 16)];
   }
 
-  static Future<pw.Widget> _rawTable(
+  static Future<List<pw.Widget>> _categorySection(
+      String title,
+      List<dynamic> rows,
+      List<dynamic>? tree,
+      String totalLabel, {
+        PdfColor accent = _neutralAccent,
+        PdfColor headerBg = _neutralBg,
+      }) async {
+    final result = tree == null ? null : buildCategoryTreeRows(tree, rows);
+    if (result == null) {
+      return _titledSimpleTable(title, rows, 'category_name', 'total', accent: accent, headerBg: headerBg);
+    }
+
+    final heading = await _sectionHeading(title, accent: accent);
+    final descHeaderImg = await _text('বিবরণ', fontSize: 9, fontWeight: FontWeight.bold, color: accent);
+    final amountHeaderImg = await _text('পরিমাণ', fontSize: 9, fontWeight: FontWeight.bold, color: accent);
+
+    final tableRows = <pw.TableRow>[
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: headerBg),
+        children: [
+          pw.Padding(padding: const pw.EdgeInsets.all(6), child: descHeaderImg),
+          pw.Padding(padding: const pw.EdgeInsets.all(6), child: amountHeaderImg),
+        ],
+      ),
+    ];
+
+    for (final node in result.rows) {
+      final isTop = node.depth == 0;
+      final weight = node.depth <= 1 ? FontWeight.bold : FontWeight.normal;
+      final color = isTop ? accent : PdfColors.black;
+      final nameImg = await _text(node.name, fontSize: 10, fontWeight: weight, color: color);
+      final amountImg = await _text(_taka(node.total.toStringAsFixed(2)), fontSize: 10, fontWeight: weight, color: color);
+      final indent = (node.depth > 8 ? 8 : node.depth) * 12.0;
+      tableRows.add(pw.TableRow(
+        decoration: pw.BoxDecoration(color: isTop ? headerBg : PdfColors.white),
+        children: [
+          pw.Padding(padding: pw.EdgeInsets.fromLTRB(5 + indent, 5, 5, 5), child: nameImg),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: amountImg),
+        ],
+      ));
+    }
+
+    final totalLabelImg = await _text(totalLabel, fontSize: 10, fontWeight: FontWeight.bold, color: accent);
+    final totalAmountImg = await _text(_taka(result.grandTotal.toStringAsFixed(2)),
+        fontSize: 10, fontWeight: FontWeight.bold, color: accent);
+    tableRows.add(pw.TableRow(
+      decoration: pw.BoxDecoration(color: headerBg),
+      children: [
+        pw.Padding(padding: const pw.EdgeInsets.all(6), child: totalLabelImg),
+        pw.Padding(padding: const pw.EdgeInsets.all(6), child: totalAmountImg),
+      ],
+    ));
+
+    return [
+      heading,
+      pw.SizedBox(height: 6),
+      pw.Table(
+        border: pw.TableBorder.all(width: 0.5, color: PdfColors.grey300),
+        columnWidths: const {0: pw.FlexColumnWidth(3), 1: pw.FlexColumnWidth(1)},
+        children: tableRows,
+      ),
+      pw.SizedBox(height: 16),
+    ];
+  }
+
+  static Future<List<pw.Widget>> _rawTable(
       String title,
       List<dynamic> rows,
       List<String> columns, {
@@ -608,16 +839,7 @@ class PdfService {
       );
     }
 
-    // fix ৩ (একই কারণ/সমাধান _titledSimpleTable-এর মন্তব্য দ্রষ্টব্য)
-    return pw.Inseparable(
-      child: pw.Container(
-        margin: const pw.EdgeInsets.only(bottom: 16),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [heading, pw.SizedBox(height: 6), body],
-        ),
-      ),
-    );
+    return [heading, pw.SizedBox(height: 6), body, pw.SizedBox(height: 16)];
   }
 }
 
@@ -628,5 +850,8 @@ class _RenderedText {
   final double height;
   _RenderedText({required this.bytes, required this.width, required this.height});
 
-  pw.Widget toWidget() => pw.Image(pw.MemoryImage(bytes), width: width, height: height);
+  // একই ছবি একাধিক জায়গায় বসালেও PDF-এ একবারই থাকে
+  late final pw.MemoryImage _image = pw.MemoryImage(bytes);
+
+  pw.Widget toWidget() => pw.Image(_image, width: width, height: height);
 }

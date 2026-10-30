@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'https://yourdomain.com/waqf_backend/api/';
+  static const String baseUrl = 'https://eliasshahwaqf.com/waqf_backend/api/';
   static const int defaultOrgId = 1;
 
   // ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/pdf_service.dart';
 import '../utils/bn_digits.dart';
+import '../utils/category_tree.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -24,6 +25,8 @@ class _ReportScreenState extends State<ReportScreen> {
 
   bool _isLoading = false;
   Map<String, dynamic>? _report;
+  List<dynamic> _incomeTree = [];
+  List<dynamic> _expenseTree = [];
 
   // কোন কোন সেকশন দেখানো হবে (রিপোর্ট "ফোকাস" — ব্যবহারকারীর তালিকার প্রতিটা রিপোর্ট নামের সাথে মিলিয়ে)
   final Set<String> _visibleSections = {
@@ -79,9 +82,16 @@ class _ReportScreenState extends State<ReportScreen> {
         break;
     }
 
+    final trees = await Future.wait([
+      ApiService.getIncomeCategories(),
+      ApiService.getExpenseCategories(),
+    ]);
+
     if (mounted) {
       setState(() {
         _report = res;
+        _incomeTree = trees[0];
+        _expenseTree = trees[1];
         _isLoading = false;
       });
     }
@@ -172,6 +182,8 @@ class _ReportScreenState extends State<ReportScreen> {
                       periodLabel: _periodLabel(),
                       visibleSections: _visibleSections,
                       isAudit: _periodType == _PeriodType.audit,
+                      incomeCategoryTree: _incomeTree,
+                      expenseCategoryTree: _expenseTree,
                     ),
                     icon: const Icon(Icons.picture_as_pdf, size: 18),
                     label: const Text('PDF'),
@@ -393,10 +405,12 @@ class _ReportScreenState extends State<ReportScreen> {
         const SizedBox(height: 24),
 
         if (_visibleSections.contains('income') && r['income_by_category'] != null)
-          _categoryTable('খাতভিত্তিক আয় (Income Report)', r['income_by_category'], Colors.green),
+          _categoryTable('খাতভিত্তিক আয় (Income Report)', r['income_by_category'], Colors.green,
+              tree: _incomeTree, totalLabel: 'সর্বমোট আয়'),
 
         if (_visibleSections.contains('expense') && r['expense_by_category'] != null)
-          _categoryTable('খাতভিত্তিক ব্যয় (Expense Report)', r['expense_by_category'], Colors.red),
+          _categoryTable('খাতভিত্তিক ব্যয় (Expense Report)', r['expense_by_category'], Colors.red,
+              tree: _expenseTree, totalLabel: 'সর্বমোট ব্যয়'),
 
         if (_visibleSections.contains('loan') && r['loan_payments'] != null)
           _paymentsSection(
@@ -482,9 +496,14 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  Widget _categoryTable(String title, List<dynamic> rows, Color color) {
+  Widget _categoryTable(String title, List<dynamic> rows, Color color,
+      {List<dynamic>? tree, String totalLabel = 'সর্বমোট'}) {
     if (rows.isEmpty) {
       return _sectionCard(title, const Text('কোনো ডেটা নেই', style: TextStyle(color: Colors.grey)));
+    }
+    final treeResult = tree == null ? null : buildCategoryTreeRows(tree, rows);
+    if (treeResult != null) {
+      return _sectionCard(title, _categoryTreeView(treeResult, color, totalLabel));
     }
     return _sectionCard(
       title,
@@ -502,6 +521,41 @@ class _ReportScreenState extends State<ReportScreen> {
           );
         }).toList(),
       ),
+    );
+  }
+
+  Widget _categoryTreeView(CategoryTreeResult result, Color color, String totalLabel) {
+    return Column(
+      children: [
+        ...result.rows.map((n) {
+          final isTop = n.depth == 0;
+          final isBold = n.depth <= 1;
+          final weight = isBold ? FontWeight.bold : FontWeight.normal;
+          final indent = (n.depth > 8 ? 8 : n.depth) * 18.0;
+          return Padding(
+            padding: EdgeInsets.only(left: indent, top: 4, bottom: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: Text(n.name, style: TextStyle(fontWeight: weight, color: isTop ? color : null))),
+                const SizedBox(width: 8),
+                Text('৳ ${n.total.toBnFixed(2)}', style: TextStyle(fontWeight: weight, color: isTop ? color : null)),
+              ],
+            ),
+          );
+        }),
+        const Divider(),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(totalLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('৳ ${result.grandTotal.toBnFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
